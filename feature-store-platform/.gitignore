@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+
+# Environment
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (catalog_ui)
+catalog_ui/node_modules/
+catalog_ui/.next/
+catalog_ui/out/
+
+# Feast
+feast_repo/data/*.parquet
+feast_repo/online_store.db
+
+# Kubernetes secrets
+k8s/*-secret.yaml

@@ -1,0 +1,11 @@
+project: feature_store_platform
+provider: local
+registry:
+  registry_type: sql
+  path: postgresql+psycopg://feast:feast_dev_password@postgres:5432/feast_registry
+online_store:
+  type: redis
+  connection_string: redis:6379
+offline_store:
+  type: file
+entity_key_serialization_version: 3

@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feature-store-config
+  namespace: feature-store
+  labels:
+    app.kubernetes.io/part-of: feature-store-platform
+data:
+  # Redis
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+
+  # PostgreSQL
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "feast_registry"
+  POSTGRES_USER: "feast"
+  # NOTE: In production, move POSTGRES_PASSWORD to a Secret
+  POSTGRES_PASSWORD: "feast_k8s_password"
+
+  # Feast
+  FEAST_REPO_PATH: "/app/feast_repo"
+  FEAST_SERVER_URL: "http://feast:6566"
+
+  # Catalog UI
+  NEXT_PUBLIC_API_URL: "http://api:8000"
+
+---
+# Feast feature_store.yaml for the k8s environment
+# Overrides the local SQLite config to use PostgreSQL + Redis
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feast-repo-config
+  namespace: feature-store
+  labels:
+    app.kubernetes.io/part-of: feature-store-platform
+data:
+  feature_store.yaml: |
+    project: feature_store_platform
+    provider: local
+    registry:
+      registry_type: sql
+      path: postgresql+psycopg://feast:feast_k8s_password@postgres:5432/feast_registry
+    online_store:
+      type: redis
+      connection_string: redis:6379
+    offline_store:
+      type: file
+    entity_key_serialization_version: 3

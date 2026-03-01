@@ -1,0 +1,61 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalog-ui
+  namespace: feature-store
+  labels:
+    app: catalog-ui
+    app.kubernetes.io/part-of: feature-store-platform
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: catalog-ui
+  template:
+    metadata:
+      labels:
+        app: catalog-ui
+    spec:
+      containers:
+        - name: catalog-ui
+          image: feature-store-platform/catalog-ui:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: feature-store-config
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalog-ui
+  namespace: feature-store
+  labels:
+    app: catalog-ui
+spec:
+  selector:
+    app: catalog-ui
+  ports:
+    - port: 3000
+      targetPort: 3000

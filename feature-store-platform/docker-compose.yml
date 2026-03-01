@@ -1,0 +1,96 @@
+# Feature Store Platform -- Local Development Stack
+#
+# Starts all 5 services with a single command:
+#     docker compose up --build
+#
+# Service dependency chain:
+#     redis + postgres  -->  feast  -->  api  -->  catalog-ui
+#
+# The feast_repo/feature_store_docker.yaml is mounted into both the
+# feast and api containers so they share the same PostgreSQL registry
+# and Redis online store (instead of isolated SQLite files).
+
+services:
+
+  # --- Online feature store -------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Feature registry database --------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: feast_registry
+      POSTGRES_USER: feast
+      POSTGRES_PASSWORD: feast_dev_password  # Dev only -- use secrets in prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feast -d feast_registry"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Feast online feature server ------------------------------------------
+  # On startup the entrypoint runs `feast apply` to register all feature
+  # definitions into the shared PostgreSQL registry, then starts serving.
+  feast:
+    build:
+      context: ./feast_repo
+    ports:
+      - "6566:6566"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./feast_repo/feature_store_docker.yaml:/app/feature_store.yaml
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+
+  # --- FastAPI registry API -------------------------------------------------
+  # Mounts the same docker Feast config so it reads from the shared
+  # PostgreSQL registry that the feast container populated.
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    ports:
+      - "8000:8000"
+    depends_on:
+      - feast
+    volumes:
+      - ./feast_repo/feature_store_docker.yaml:/app/feast_repo/feature_store.yaml
+    environment:
+      FEAST_REPO_PATH: /app/feast_repo
+
+  # --- Next.js feature catalog UI -------------------------------------------
+  # NEXT_PUBLIC_API_URL is baked in at build time via build args.
+  # The browser makes requests to localhost:8000 (not "api") because
+  # the browser runs on the host, not inside Docker.
+  catalog-ui:
+    build:
+      context: ./catalog_ui
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  redis-data:
+  pg-data:

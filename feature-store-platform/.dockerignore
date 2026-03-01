@@ -1,0 +1,13 @@
+**/.git
+**/__pycache__
+**/*.pyc
+**/.venv
+**/venv
+**/node_modules
+**/.next
+**/dist
+**/.env
+**/.env.local
+**/k8s
+**/*.md
+**/docs

@@ -1,0 +1,42 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: feature-store-ingress
+  namespace: feature-store
+  labels:
+    app.kubernetes.io/part-of: feature-store-platform
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: features.localhost
+      http:
+        paths:
+          # Catalog UI — serves the frontend
+          - path: /()(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: catalog-ui
+                port:
+                  number: 3000
+
+          # FastAPI registry API
+          - path: /api(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: api
+                port:
+                  number: 8000
+
+          # Feast online feature server
+          - path: /feast(/|$)(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: feast
+                port:
+                  number: 6566
